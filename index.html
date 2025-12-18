@@ -23,46 +23,59 @@
             { nome: "Escalas", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=ESCAL&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 15000 }
         ];
 
+        const URL_TROCA_TURNO = "https://jpleiria.github.io/troca_turno/";
+        const DURACAO_TROCA_TURNO = 60000; // 1 minuto na tela de troca
+        
         let indiceAtual = 0;
+        let timeoutSlideshow;
+        let emTrocaDeTurno = false; 
+
         const iframe = document.getElementById('site-frame');
         const somAlerta = document.getElementById('alerta-som');
 
-        function carregarProximoSite() {
+        function carregarSlideshow() {
+            if (emTrocaDeTurno) return;
+
+            const siteAtual = sites[indiceAtual];
+            console.log(`Carregando: ${siteAtual.nome}`);
+            iframe.src = siteAtual.url;
+
+            indiceAtual = (indiceAtual + 1) % sites.length;
+            
+            clearTimeout(timeoutSlideshow);
+            timeoutSlideshow = setTimeout(carregarSlideshow, siteAtual.tempo);
+        }
+
+        function verificarHorarioPrioritario() {
             const agora = new Date();
             const hora = agora.getHours();
             const minuto = agora.getMinutes();
+            const segundo = agora.getSeconds();
 
-            let urlParaCarregar;
-            let tempoDeExibicao;
-
-            // VERIFICAÇÃO: Troca de Turno às 08h00 ou 20h00
-            if ((hora === 8 || hora === 20) && (minuto === 0)) {
-                console.log("Horário de Troca de Turno: Alerta sonoro ativado.");
+            // Ativação precisa no segundo 0 das 08:00 ou 20:00
+            if ((hora === 8 || hora === 20) && minuto === 0 && segundo === 0 && !emTrocaDeTurno) {
+                console.log("Horário de Troca de Turno: Ativando...");
                 
-                urlParaCarregar = "https://jpleiria.github.io/troca_turno/";
-                tempoDeExibicao = 60000; 
-
-                // Toca o som de alerta
-                somAlerta.play().catch(e => console.log("O áudio precisa de interação inicial para tocar."));
+                emTrocaDeTurno = true;
+                clearTimeout(timeoutSlideshow);
                 
-            } else {
-                // FLUXO NORMAL
-                const siteAtual = sites[indiceAtual];
-                urlParaCarregar = siteAtual.url;
-                tempoDeExibicao = siteAtual.tempo;
+                iframe.src = URL_TROCA_TURNO;
+                somAlerta.play().catch(e => console.log("Áudio bloqueado pelo navegador. Requer clique inicial."));
 
-                console.log(`Carregando: ${siteAtual.nome}`);
-                indiceAtual = (indiceAtual + 1) % sites.length;
+                // Agenda o retorno ao carrossel normal
+                setTimeout(() => {
+                    console.log("Fim da Troca de Turno. Retornando ao fluxo normal.");
+                    emTrocaDeTurno = false;
+                    carregarSlideshow();
+                }, DURACAO_TROCA_TURNO);
             }
-
-            if (iframe.src !== urlParaCarregar) {
-                iframe.src = urlParaCarregar;
-            }
-
-            setTimeout(carregarProximoSite, tempoDeExibicao);
         }
 
-        carregarProximoSite();
+        // Verifica o relógio a cada segundo para garantir o disparo às 08:00:00
+        setInterval(verificarHorarioPrioritario, 1000);
+
+        // Inicia o sistema
+        carregarSlideshow();
     </script>
 </body>
 </html>
