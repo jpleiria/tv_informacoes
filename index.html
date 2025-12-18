@@ -5,57 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Informações - Slideshow</title>
     <style>
-        /* Estilo para garantir que o iframe ocupe toda a área visível */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden; /* Evita barras de rolagem no corpo da página */
-        }
-        #site-frame {
-            width: 100%;
-            height: 100%;
-            border: none; /* Remove a borda padrão do iframe */
-        }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #site-frame { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
+    <audio id="alerta-som" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
     <iframe id="site-frame" src="" title="Slideshow de Páginas Operacionais"></iframe>
 
     <script>
-        // Lista de todos os URLs e tempos de exibição (em milissegundos)
         const sites = [
-            { nome: "Relógio", url: "https://jpleiria.github.io/Relogio_painel/", tempo: 30000 }, // 30 segundos
-            { nome: "Ocorrências", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=OCCOR&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 20000 }, // 20 segundos
-            { nome: "Viaturas", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=VIATU&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 15000 }, // 15 segundos
-            { nome: "Escalas", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=ESCAL&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 15000 } // 15 segundos
+            { nome: "Relógio", url: "https://jpleiria.github.io/Relogio_painel/", tempo: 30000 },
+            { nome: "Ocorrências", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=OCCOR&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 20000 },
+            { nome: "Viaturas", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=VIATU&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 15000 },
+            { nome: "Escalas", url: "https://app.gescorp.pt/app/quartel/fvd.php?display=ESCAL&key=xuvPnG2JEsuVNy%2FEK9%2Ff%2BhkLSOKo%2BBWl%3ADsDe5ZjIOcb9Bg9kQ1zTUBc3gOmptb4%2B", tempo: 15000 }
         ];
 
         let indiceAtual = 0;
         const iframe = document.getElementById('site-frame');
+        const somAlerta = document.getElementById('alerta-som');
 
-        /**
-         * Função principal para carregar o próximo site e agendar o próximo.
-         */
         function carregarProximoSite() {
-            const siteAtual = sites[indiceAtual];
-            
-            // 1. Define o iframe src para o novo URL
-            console.log(`Carregando: ${siteAtual.nome} por ${siteAtual.tempo / 1000} segundos`);
-            iframe.src = siteAtual.url;
+            const agora = new Date();
+            const hora = agora.getHours();
+            const minuto = agora.getMinutes();
 
-            // 2. Calcula o índice para a próxima iteração
-            // Volta a 0 para criar um loop contínuo (slideshow infinito).
-            indiceAtual = (indiceAtual + 1) % sites.length; 
+            let urlParaCarregar;
+            let tempoDeExibicao;
 
-            // 3. Configura o temporizador para chamar esta função novamente após o tempo definido.
-            setTimeout(carregarProximoSite, siteAtual.tempo);
+            // VERIFICAÇÃO: Troca de Turno às 08h00 ou 20h00
+            if ((hora === 8 || hora === 20) && (minuto === 0)) {
+                console.log("Horário de Troca de Turno: Alerta sonoro ativado.");
+                
+                urlParaCarregar = "https://jpleiria.github.io/troca_turno/";
+                tempoDeExibicao = 60000; 
+
+                // Toca o som de alerta
+                somAlerta.play().catch(e => console.log("O áudio precisa de interação inicial para tocar."));
+                
+            } else {
+                // FLUXO NORMAL
+                const siteAtual = sites[indiceAtual];
+                urlParaCarregar = siteAtual.url;
+                tempoDeExibicao = siteAtual.tempo;
+
+                console.log(`Carregando: ${siteAtual.nome}`);
+                indiceAtual = (indiceAtual + 1) % sites.length;
+            }
+
+            if (iframe.src !== urlParaCarregar) {
+                iframe.src = urlParaCarregar;
+            }
+
+            setTimeout(carregarProximoSite, tempoDeExibicao);
         }
 
-        // 4. Inicia o slideshow
         carregarProximoSite();
     </script>
-
 </body>
 </html>
